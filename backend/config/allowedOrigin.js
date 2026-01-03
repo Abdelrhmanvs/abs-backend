@@ -1,5 +1,5 @@
-const allowedOrigin=[
-    'http://localhost:3500',
-    'http://localhost:3000'
-]
-module.exports=allowedOrigin
+const allowedOrigin = [
+  "https://abs-frontend-psi.vercel.app",
+  "http://localhost:3000",
+];
+module.exports = allowedOrigin;
