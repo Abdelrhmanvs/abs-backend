@@ -2,6 +2,11 @@ const Request = require("../models/Request");
 const User = require("../models/User");
 const asyncHandler = require("express-async-handler");
 
+// Helper function to check if user has admin-level permissions
+const hasAdminPrivileges = (roles) => {
+  return roles?.includes("admin") || roles?.includes("teamleader");
+};
+
 // HR Form Category Mapping
 const getHRCategory = (requestType) => {
   const categoryMap = {
@@ -146,7 +151,7 @@ const getAllRequests = asyncHandler(async (req, res) => {
   }
 
   // Check if user has admin privileges
-  if (!roles?.includes("admin")) {
+  if (!hasAdminPrivileges(roles)) {
     return res
       .status(403)
       .json({ message: "Unauthorized - Admin access only" });
@@ -208,8 +213,12 @@ const getWeekSchedule = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
-  // Calculate current week (Sunday to Saturday)
-  const today = new Date();
+  // Calculate current week (Sunday to Saturday) using Egypt timezone (UTC+2)
+  const now = new Date();
+  const egyptOffset = 2 * 60 * 60 * 1000;
+  const today = new Date(
+    now.getTime() + egyptOffset + now.getTimezoneOffset() * 60 * 1000
+  );
   const dayOfWeek = today.getDay();
   const sunday = new Date(today);
   sunday.setDate(today.getDate() - dayOfWeek);
@@ -430,9 +439,13 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
       .json({ message: "Unauthorized - Admin or Team Lead access only" });
   }
 
-  // Calculate current week (Sunday to Saturday) in local timezone
-  const today = new Date();
-  // Set to start of day in local timezone to avoid timezone shifts
+  // Calculate current week (Sunday to Saturday) using UTC+2 (Egypt timezone)
+  const now = new Date();
+  // Adjust for Egypt timezone (UTC+2)
+  const egyptOffset = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+  const today = new Date(
+    now.getTime() + egyptOffset + now.getTimezoneOffset() * 60 * 1000
+  );
   today.setHours(0, 0, 0, 0);
   const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
 
@@ -574,7 +587,7 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
   });
 });
 
-//@desc Delete all approved requests
+//@desc Delete all requests
 //@route DELETE /requests/all
 //@access Private (Admin)
 const deleteAllRequests = asyncHandler(async (req, res) => {
@@ -592,11 +605,11 @@ const deleteAllRequests = asyncHandler(async (req, res) => {
       .json({ message: "Unauthorized - Admin access only" });
   }
 
-  // Delete all approved requests
-  const result = await Request.deleteMany({ status: "Approved" });
+  // Delete all requests
+  const result = await Request.deleteMany({});
 
   res.json({
-    message: "All approved requests deleted successfully",
+    message: "All requests deleted successfully",
     deletedCount: result.deletedCount,
   });
 });
@@ -641,8 +654,12 @@ const generateRandomWFH = asyncHandler(async (req, res) => {
       .json({ message: "Number of days must be between 1 and 7" });
   }
 
-  // Calculate current week (Sunday to Saturday) in local timezone
-  const today = new Date();
+  // Calculate current week (Sunday to Saturday) using Egypt timezone (UTC+2)
+  const now = new Date();
+  const egyptOffset = 2 * 60 * 60 * 1000;
+  const today = new Date(
+    now.getTime() + egyptOffset + now.getTimezoneOffset() * 60 * 1000
+  );
   today.setHours(0, 0, 0, 0);
   const dayOfWeek = today.getDay();
 

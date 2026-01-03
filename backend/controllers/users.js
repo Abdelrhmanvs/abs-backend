@@ -211,6 +211,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       platformUsageCount: user.platformUsageCount || 0,
       title: user.title || "",
       fullName: user.fullName || "",
+      profilePhoto: user.profilePhoto || "",
     },
   });
 });
@@ -498,6 +499,80 @@ const getAllEmployees = asyncHandler(async (req, res) => {
   res.json(employees);
 });
 
+//@desc Change user password
+//@route PATCH /users/change-password
+//@access Private
+const changePassword = asyncHandler(async (req, res) => {
+  const email = req.user;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "User not found in token" });
+  }
+
+  if (!currentPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ message: "Current password and new password are required" });
+  }
+
+  if (newPassword.length < 6) {
+    return res
+      .status(400)
+      .json({ message: "New password must be at least 6 characters" });
+  }
+
+  // Find the user
+  const user = await User.findOne({ email }).exec();
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  // Verify current password
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ message: "Current password is incorrect" });
+  }
+
+  // Hash new password and save
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  user.password = hashedPassword;
+  await user.save();
+
+  res.json({ message: "Password changed successfully" });
+});
+
+//@desc Upload profile photo
+//@route PATCH /users/profile-photo
+//@access Private
+const uploadProfilePhoto = asyncHandler(async (req, res) => {
+  const email = req.user;
+  const { profilePhoto } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "User not found in token" });
+  }
+
+  if (!profilePhoto) {
+    return res.status(400).json({ message: "Profile photo is required" });
+  }
+
+  // Find the user
+  const user = await User.findOne({ email }).exec();
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  // Save the base64 image
+  user.profilePhoto = profilePhoto;
+  await user.save();
+
+  res.json({
+    message: "Profile photo updated successfully",
+    profilePhoto: user.profilePhoto,
+  });
+});
+
 module.exports = {
   getallUsers,
   createNewUser,
@@ -508,4 +583,6 @@ module.exports = {
   updateUserProfile,
   createEmployee,
   getAllEmployees,
+  changePassword,
+  uploadProfilePhoto,
 };

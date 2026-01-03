@@ -49,7 +49,12 @@ const login = asyncHandler(async (req, res) => {
     sameSite: "None",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
-  res.json({ accessToken, roles, email: foundUser.email });
+  res.json({
+    accessToken,
+    roles,
+    email: foundUser.email,
+    fullName: foundUser.fullName,
+  });
 
   //do stuff
 });

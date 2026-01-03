@@ -3,8 +3,8 @@ const express = require("express");
 const router = express.Router();
 const users = require("../controllers/users");
 const verifyjwt = require("../middleware/verifyJwt");
-const loginLimiter = require("../middleware/loginLimiter");
-router.use(loginLimiter);
+// const loginLimiter = require("../middleware/loginLimiter");
+// router.use(loginLimiter);
 // router.use(verifyjwt)
 router
   .route("/")
@@ -21,6 +21,11 @@ router
   .route("/profile")
   .get(verifyjwt, users.getUserProfile)
   .patch(verifyjwt, users.updateUserProfile);
+
+router.route("/profile-photo").patch(verifyjwt, users.uploadProfilePhoto);
+
+router.route("/change-password").patch(verifyjwt, users.changePassword);
+
 router
   .route("/:id")
   .patch(users.updateuser)
