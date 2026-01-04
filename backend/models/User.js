@@ -107,6 +107,7 @@ const userSchema = new mongoose.Schema({
       "Backend Developer",
       "UI/UX",
       "RA",
+      "Mobile App Developer",
     ],
     trim: true,
   },

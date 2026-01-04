@@ -327,9 +327,11 @@ const getApprovedRequests = asyncHandler(async (req, res) => {
       "",
     jobPosition: "مهندس برمجيات",
     branch: request.employeeId?.branch || "",
-    timeOffType: request.type === "WFH" ? "ماموريه" : "", // Only show "ماموريه" (Mission) for WFH
+    timeOffType:
+      request.type === "WFH" ? "ماموريه" : getHRCategory(request.type), // إجازة / اذن تأخير / انصراف مبكر
+
+    purpose: request.type === "WFH" ? "العمل من المنزل" : "",
     requestType: request.type, // Include raw type for filtering
-    purpose: getHRCategory(request.type), // Show العمل من المنزل or إجازة based on type
     startDate: formatLocalDate(request.startDate),
     endDate: formatLocalDate(request.endDate),
     numberOfDays: String(request.numberOfDays || ""),
