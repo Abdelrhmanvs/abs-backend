@@ -340,12 +340,11 @@ const getApprovedRequests = asyncHandler(async (req, res) => {
   res.json(hrFormData);
 });
 
-//@desc Update request status (Approve/Reject)
+//@desc Update request status and HR Form fields
 //@route PATCH /requests/:id
 //@access Private (Admin)
 const updateRequestStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
   const email = req.user;
   const roles = req.roles;
 
@@ -353,29 +352,44 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User not found in token" });
   }
 
-  // Check if user has admin privileges
   if (!roles?.includes("admin")) {
     return res
       .status(403)
       .json({ message: "Unauthorized - Admin access only" });
   }
 
-  // Validate status
-  if (!["Approved", "Rejected", "Pending"].includes(status)) {
-    return res.status(400).json({ message: "Invalid status value" });
-  }
-
-  // Find and update request
   const request = await Request.findById(id).exec();
   if (!request) {
     return res.status(404).json({ message: "Request not found" });
   }
 
-  request.status = status;
+  const {
+    status,
+    employeeName,
+    startDate,
+    endDate,
+    numberOfDays,
+    notes,
+    reason,
+  } = req.body;
+
+  // Update status if provided
+  if (status && ["Approved", "Rejected", "Pending"].includes(status)) {
+    request.status = status;
+  }
+
+  // Update HR form editable fields
+  if (employeeName !== undefined) request.employeeName = employeeName;
+  if (startDate) request.startDate = new Date(startDate);
+  if (endDate) request.endDate = new Date(endDate);
+  if (numberOfDays !== undefined) request.numberOfDays = numberOfDays;
+  if (notes !== undefined) request.notes = notes;
+  if (reason !== undefined) request.reason = reason;
+
   const updatedRequest = await request.save();
 
   res.json({
-    message: `Request ${status.toLowerCase()} successfully`,
+    message: "Request updated successfully",
     request: updatedRequest,
   });
 });
@@ -433,6 +447,8 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
 
   // Determine if user has access and which team members they can see
   const isAdmin = roles?.includes("admin");
+  // Week offset: 0 = this week, 1 = next week
+  const offset = Number(req.query.offset || 0);
   const allowedTitles = getTeamMemberTitles(currentUser.title);
 
   if (!isAdmin && !allowedTitles) {
@@ -441,31 +457,33 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
       .json({ message: "Unauthorized - Admin or Team Lead access only" });
   }
 
-  // Calculate current week (Sunday to Saturday) using UTC+2 (Egypt timezone)
+// Calculate current week (Saturday to Friday) using Egypt timezone (UTC+2)
   const now = new Date();
-  // Adjust for Egypt timezone (UTC+2)
-  const egyptOffset = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+  const egyptOffset = 2 * 60 * 60 * 1000;
   const today = new Date(
     now.getTime() + egyptOffset + now.getTimezoneOffset() * 60 * 1000
   );
   today.setHours(0, 0, 0, 0);
-  const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
 
-  // Get Sunday of current week
-  const sunday = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() - dayOfWeek
-  );
-  sunday.setHours(0, 0, 0, 0);
+  // JS: 0 = Sunday ... 6 = Saturday
+  const dayOfWeek = today.getDay();
 
-  // Get Saturday of current week
-  const saturday = new Date(
-    sunday.getFullYear(),
-    sunday.getMonth(),
-    sunday.getDate() + 6
-  );
-  saturday.setHours(23, 59, 59, 999);
+  // Egypt week starts on Saturday
+  const diffToSaturday = (dayOfWeek + 1) % 7;
+
+  // Start = Saturday
+  const saturday = new Date(today);
+  saturday.setDate(today.getDate() - diffToSaturday);
+  saturday.setHours(0, 0, 0, 0);
+
+  // End = Friday
+  const friday = new Date(saturday);
+  friday.setDate(saturday.getDate() + 6);
+  friday.setHours(23, 59, 59, 999);
+
+  // Apply week offset
+  saturday.setDate(saturday.getDate() + offset * 7);
+  friday.setDate(friday.getDate() + offset * 7);
 
   // Build employee filter query
   let employeeFilter = { employeeCode: { $exists: true, $ne: null } };
@@ -485,36 +503,28 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
   const approvedRequests = await Request.find({
     status: "Approved",
     employeeId: { $in: teamMemberIds },
-    startDate: { $lte: saturday },
-    endDate: { $gte: sunday },
+    startDate: { $lte: friday },
+    endDate: { $gte: saturday },
   })
     .populate("employeeId", "fullName employeeCode")
     .sort({ employeeName: 1 })
     .lean();
 
-  // Generate array of days for current week using local dates
+  // Generate array of days for current week using local dates (Saturday → Friday)
   const weekDays = [];
   for (let i = 0; i < 7; i++) {
     const day = new Date(
-      sunday.getFullYear(),
-      sunday.getMonth(),
-      sunday.getDate() + i
+      saturday.getFullYear(),
+      saturday.getMonth(),
+      saturday.getDate() + i
     );
     const year = day.getFullYear();
     const month = String(day.getMonth() + 1).padStart(2, "0");
     const date = String(day.getDate()).padStart(2, "0");
     weekDays.push({
       date: `${year}-${month}-${date}`,
-      dayName: [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ][i],
-      dayShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i],
+      dayName: ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"][i],
+      dayShort: ["Sat","Sun","Mon","Tue","Wed","Thu","Fri"][i],
     });
   }
 
@@ -581,8 +591,8 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
 
   res.json({
     weekRange: {
-      start: formatLocalDate(sunday),
-      end: formatLocalDate(saturday),
+      start: formatLocalDate(saturday),
+      end: formatLocalDate(friday),
     },
     weekDays,
     employees: scheduleArray,
@@ -664,6 +674,7 @@ const generateRandomWFH = asyncHandler(async (req, res) => {
   );
   today.setHours(0, 0, 0, 0);
   const dayOfWeek = today.getDay();
+  const offset = Number(req.query.offset || 0);
 
   // Get Sunday of current week
   const sunday = new Date(
@@ -677,6 +688,10 @@ const generateRandomWFH = asyncHandler(async (req, res) => {
   const saturday = new Date(sunday);
   saturday.setDate(sunday.getDate() + 6);
   saturday.setHours(23, 59, 59, 999);
+
+  // Apply week offset
+  sunday.setDate(sunday.getDate() + offset * 7);
+  saturday.setDate(saturday.getDate() + offset * 7);
 
   // Generate week days array (Sunday to Saturday)
   const weekDays = [];
