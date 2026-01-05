@@ -42,6 +42,10 @@ const requestSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    purpose: {
+      type: String,
+      default: "",
+    },
     notes: {
       type: String,
       default: "",

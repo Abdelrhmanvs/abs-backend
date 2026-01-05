@@ -330,7 +330,12 @@ const getApprovedRequests = asyncHandler(async (req, res) => {
     timeOffType:
       request.type === "WFH" ? "ماموريه" : getHRCategory(request.type), // إجازة / اذن تأخير / انصراف مبكر
 
-    purpose: request.type === "WFH" ? "العمل من المنزل" : "",
+    purpose:
+      !request.purpose || request.purpose === ""
+        ? request.type === "WFH"
+          ? "العمل من المنزل"
+          : ""
+        : request.purpose,
     requestType: request.type, // Include raw type for filtering
     startDate: formatLocalDate(request.startDate),
     endDate: formatLocalDate(request.endDate),
@@ -370,13 +375,16 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
     endDate,
     numberOfDays,
     notes,
-    reason,
+    purpose,
+    type,
   } = req.body;
 
   // Update status if provided
   if (status && ["Approved", "Rejected", "Pending"].includes(status)) {
     request.status = status;
   }
+  console.log("Updating request with ID:", id);
+  console.log("New data:", req.body);
 
   // Update HR form editable fields
   if (employeeName !== undefined) request.employeeName = employeeName;
@@ -384,7 +392,8 @@ const updateRequestStatus = asyncHandler(async (req, res) => {
   if (endDate) request.endDate = new Date(endDate);
   if (numberOfDays !== undefined) request.numberOfDays = numberOfDays;
   if (notes !== undefined) request.notes = notes;
-  if (reason !== undefined) request.reason = reason;
+  if (purpose !== undefined) request.purpose = purpose;
+  if (type !== undefined) request.type = type;
 
   const updatedRequest = await request.save();
 
@@ -457,7 +466,7 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
       .json({ message: "Unauthorized - Admin or Team Lead access only" });
   }
 
-// Calculate current week (Saturday to Friday) using Egypt timezone (UTC+2)
+  // Calculate current week (Saturday to Friday) using Egypt timezone (UTC+2)
   const now = new Date();
   const egyptOffset = 2 * 60 * 60 * 1000;
   const today = new Date(
@@ -499,10 +508,11 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
 
   const teamMemberIds = teamMembers.map((m) => m._id);
 
-  // Fetch all approved requests for team members that overlap with current week
+  // Fetch all approved WFH/VACATION requests for team members that overlap with current week
   const approvedRequests = await Request.find({
     status: "Approved",
     employeeId: { $in: teamMemberIds },
+    type: { $in: ["WFH", "VACATION"] }, // ⬅️ منع Late / Early من الظهور
     startDate: { $lte: friday },
     endDate: { $gte: saturday },
   })
@@ -523,8 +533,16 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
     const date = String(day.getDate()).padStart(2, "0");
     weekDays.push({
       date: `${year}-${month}-${date}`,
-      dayName: ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"][i],
-      dayShort: ["Sat","Sun","Mon","Tue","Wed","Thu","Fri"][i],
+      dayName: [
+        "Saturday",
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+      ][i],
+      dayShort: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"][i],
     });
   }
 
@@ -558,9 +576,13 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
       currentDay.setHours(0, 0, 0, 0);
       if (currentDay >= requestStart && currentDay <= requestEnd) {
         employee.schedule[weekDay.date] = {
-          isWFH: true,
+          isWFH: request.type === "WFH" || request.type === "VACATION", // ⬅️ خلى Vacation تبان
+          isVacation: request.type === "VACATION",
           type: request.type,
-          purpose: request.notes || request.reason || "Work From Home",
+          purpose:
+            request.type === "WFH"
+              ? request.notes || request.reason || "Work From Home"
+              : "Vacation",
           requestId: request._id,
         };
       }

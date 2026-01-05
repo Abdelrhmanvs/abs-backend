@@ -49,6 +49,15 @@ const sendCredentialsEmail = async (recipientEmail, password, employeeData) => {
               
               <p>Your account has been successfully created. Below are your login credentials:</p>
               
+              <p>
+                You can access the system using the link below:
+              </p>
+              <p>
+                <a href="https://abs-frontend-psi.vercel.app/" target="_blank" style="color:#EA8303; font-weight:bold;">
+                  https://abs-frontend-psi.vercel.app/
+                </a>
+              </p>
+              
               <div class="credentials">
                 <div class="credential-item">
                   <span class="credential-label">Email:</span><br/>
@@ -93,6 +102,9 @@ Welcome to ${process.env.COMPANY_NAME || "ABS Company"}!
 Dear ${employeeData.fullName},
 
 Your account has been successfully created. Below are your login credentials:
+
+System Link:
+https://abs-frontend-psi.vercel.app/
 
 Email: ${recipientEmail}
 Password: ${password}
