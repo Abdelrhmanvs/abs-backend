@@ -503,7 +503,7 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
 
   // Fetch team members based on filter
   const teamMembers = await User.find(employeeFilter)
-    .select("_id fullName employeeCode title")
+    .select("_id fullName employeeCode fingerprintCode title")
     .lean();
 
   const teamMemberIds = teamMembers.map((m) => m._id);
@@ -516,7 +516,7 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
     startDate: { $lte: friday },
     endDate: { $gte: saturday },
   })
-    .populate("employeeId", "fullName employeeCode")
+    .populate("employeeId", "fullName employeeCode fingerprintCode")
     .sort({ employeeName: 1 })
     .lean();
 
@@ -560,6 +560,7 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
       employeeSchedule.set(employeeKey, {
         employeeName,
         employeeCode,
+        fingerprint: request.employeeId?.fingerprintCode || "",
         schedule: {},
       });
     }
@@ -593,6 +594,7 @@ const getWeeklyWFH = asyncHandler(async (req, res) => {
   const scheduleArray = Array.from(employeeSchedule.values()).map((emp) => ({
     employeeName: emp.employeeName,
     employeeCode: emp.employeeCode,
+    fingerprint: emp.fingerprint,
     weekSchedule: weekDays.map((day) => ({
       date: day.date,
       dayName: day.dayName,

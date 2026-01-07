@@ -1,0 +1,11 @@
+[
+  { "date": "2026-01-07", "name": "Coptic Christmas Day", "type": "religious" },
+  { "date": "2026-04-25", "name": "Sinai Liberation Day", "type": "public" },
+  { "date": "2026-05-01", "name": "Labour Day", "type": "public" },
+  { "date": "2026-07-23", "name": "Revolution Day", "type": "public" },
+  { "date": "2026-10-06", "name": "Armed Forces Day", "type": "public" },
+  { "date": "2026-03-20", "name": "Eid al-Fitr", "type": "religious" },
+  { "date": "2026-03-21", "name": "Eid al-Fitr Holiday", "type": "religious" },
+  { "date": "2026-05-27", "name": "Eid al-Adha", "type": "religious" },
+  { "date": "2026-05-28", "name": "Eid al-Adha Holiday", "type": "religious" }
+]
