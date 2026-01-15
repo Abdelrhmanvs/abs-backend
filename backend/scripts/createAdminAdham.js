@@ -2,7 +2,6 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
-const { encryptPassword } = require("../utils/encryption");
 
 const createAdminUser = async () => {
   try {
@@ -20,7 +19,6 @@ const createAdminUser = async () => {
     // Admin user details
     const password = "adham123"; // Change this to a secure password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const encryptedPassword = encryptPassword(password);
 
     // Create admin user
     const adminUser = await User.create({
@@ -28,7 +26,6 @@ const createAdminUser = async () => {
       fullName: "Adham Admin",
       email: "adham@admin.com",
       password: hashedPassword,
-      encryptedPassword: encryptedPassword,
       roles: ["admin"],
       active: true,
       phonenumber: "0000000000",

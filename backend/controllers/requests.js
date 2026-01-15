@@ -642,8 +642,10 @@ const deleteAllRequests = asyncHandler(async (req, res) => {
   }
 
   // Delete all requests
-  const result = await Request.deleteMany({});
-
+  const result = await Request.deleteMany({
+    status: { $in: ["Approved", "Rejected"] },
+  });
+  
   res.json({
     message: "All requests deleted successfully",
     deletedCount: result.deletedCount,

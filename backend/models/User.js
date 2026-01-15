@@ -38,10 +38,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "123",
   },
-  encryptedPassword: {
-    type: String,
-    default: "",
-  },
   country: {
     type: String,
     default: "country",
